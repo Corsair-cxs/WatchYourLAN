@@ -1,4 +1,4 @@
-export const apiPath = 'http://0.0.0.0:8840';
+export const apiPath = '';
 
 export const apiGetAllHosts = async () => {
   const url = apiPath+'/api/all';
