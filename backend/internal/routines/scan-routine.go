@@ -3,6 +3,7 @@ package routines
 import (
 	"sort"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aceberg/WatchYourLAN/internal/arp"
@@ -15,9 +16,21 @@ import (
 	"github.com/aceberg/WatchYourLAN/internal/prometheus"
 )
 
+var scanMu sync.Mutex
+
+// ScanNow runs one scan immediately and waits until DB state is updated.
+func ScanNow() {
+	scanMu.Lock()
+	defer scanMu.Unlock()
+
+	foundHosts := arp.Scan(conf.AppConfig.Ifaces, conf.AppConfig.ArpArgs, conf.AppConfig.ArpStrs)
+	foundHosts = check.EnrichHosts(foundHosts)
+
+	compareHosts(newFoundHostIndex(foundHosts))
+}
+
 func startScan(quit chan bool) {
 	var lastDate, nowDate, plusDate time.Time
-	var foundHosts []models.Host
 
 	for {
 		select {
@@ -29,15 +42,16 @@ func startScan(quit chan bool) {
 
 			if nowDate.After(plusDate) {
 
-				foundHosts = arp.Scan(conf.AppConfig.Ifaces, conf.AppConfig.ArpArgs, conf.AppConfig.ArpStrs)
-				foundHosts = check.EnrichHosts(foundHosts)
-
-				compareHosts(newFoundHostIndex(foundHosts))
+				ScanNow()
 
 				lastDate = time.Now()
 			}
 
-			time.Sleep(time.Duration(1) * time.Minute)
+			select {
+			case <-quit:
+				return
+			case <-time.After(time.Duration(1) * time.Minute):
+			}
 		}
 	}
 }

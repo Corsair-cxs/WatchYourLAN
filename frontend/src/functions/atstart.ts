@@ -15,7 +15,7 @@ export function runAtStart() {
 export async function getHosts() {
   const hosts = await apiGetAllHosts();
 
-  if (hosts !== null && hosts.length > 0) {
+  if (hosts !== null) {
     setAllHosts(hosts);
     setBkpHosts(hosts);
 

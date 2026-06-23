@@ -29,6 +29,12 @@ export const apiTestNotify = async () => {
   await fetch(url);
 };
 
+export const apiRescan = async () => {
+
+  const url = apiPath+'/api/rescan';
+  await fetch(url);
+};
+
 export const apiEditHost = async (id:number, name:string, known:string) => {
 
   const url = apiPath+'/api/edit/'+id+'/'+name+'/'+known;
