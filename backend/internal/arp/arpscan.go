@@ -8,28 +8,47 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
-	"github.com/aceberg/WatchYourLAN/internal/check"
 	"github.com/aceberg/WatchYourLAN/internal/models"
 )
 
 var arpArgs string
+var lastScanErrors = scanErrors{
+	items: make(map[string]ScanError),
+}
+
+// ScanError is the last arp-scan failure captured for one source.
+type ScanError struct {
+	Source  string
+	Command string
+	Error   string
+	Output  string
+}
+
+type scanErrors struct {
+	sync.RWMutex
+	items map[string]ScanError
+}
 
 func scanIface(iface string) string {
-	var cmd *exec.Cmd
-
+	args := []string{"-glNx"}
 	if arpArgs != "" {
-		cmd = exec.Command("arp-scan", "-glNx", arpArgs, "-I", iface)
-	} else {
-		cmd = exec.Command("arp-scan", "-glNx", "-I", iface)
+		args = append(args, strings.Fields(arpArgs)...)
 	}
-	out, err := cmd.Output()
+	args = append(args, "-I", iface)
+
+	cmd := exec.Command("arp-scan", args...)
+	out, err := cmd.CombinedOutput()
 	slog.Debug(cmd.String())
 
-	if check.IfError(err) {
+	if err != nil {
+		recordScanError(iface, cmd.String(), err.Error(), string(out))
+		slog.Warn("arp-scan failed", "iface", iface, "cmd", cmd.String(), "err", err, "output", strings.TrimSpace(string(out)))
 		return string("")
 	}
+	clearScanError(iface)
 	return string(out)
 }
 
@@ -38,13 +57,51 @@ func scanStr(str string) string {
 	args := strings.Split(str, " ")
 	cmd := exec.Command("arp-scan", args...)
 
-	out, err := cmd.Output()
+	out, err := cmd.CombinedOutput()
 	slog.Debug(cmd.String())
 
-	if check.IfError(err) {
+	if err != nil {
+		recordScanError(str, cmd.String(), err.Error(), string(out))
+		slog.Warn("arp-scan failed", "scan", str, "cmd", cmd.String(), "err", err, "output", strings.TrimSpace(string(out)))
 		return string("")
 	}
+	clearScanError(str)
 	return string(out)
+}
+
+func recordScanError(source, command, errText, output string) {
+	lastScanErrors.Lock()
+	defer lastScanErrors.Unlock()
+
+	lastScanErrors.items[source] = ScanError{
+		Source:  source,
+		Command: command,
+		Error:   strings.TrimSpace(errText),
+		Output:  strings.TrimSpace(output),
+	}
+}
+
+func clearScanError(source string) {
+	lastScanErrors.Lock()
+	defer lastScanErrors.Unlock()
+
+	delete(lastScanErrors.items, source)
+}
+
+// LastScanErrors returns the last arp-scan failures keyed by interface or scan string.
+func LastScanErrors() []ScanError {
+	lastScanErrors.RLock()
+	defer lastScanErrors.RUnlock()
+
+	errors := make([]ScanError, 0, len(lastScanErrors.items))
+	for _, item := range lastScanErrors.items {
+		errors = append(errors, item)
+	}
+	sort.Slice(errors, func(i, j int) bool {
+		return errors[i].Source < errors[j].Source
+	})
+
+	return errors
 }
 
 func parseOutput(text, iface string) []models.Host {
@@ -98,19 +155,41 @@ func Scan(ifaces, args string, strs []string) []models.Host {
 }
 
 func resolveScanInterfaces(ifaces string) []string {
+	selection := ScanInterfaceSelection(ifaces)
+
+	if len(selection.Invalid) > 0 {
+		slog.Warn("Ignoring unavailable scan interfaces", "ifaces", strings.Join(selection.Invalid, " "))
+	}
+	if selection.UsedAuto && len(selection.Selected) > 0 {
+		slog.Warn("Using auto-detected scan interfaces", "ifaces", strings.Join(selection.Selected, " "))
+	}
+
+	return selection.Selected
+}
+
+// InterfaceSelection describes how scan interfaces were selected.
+type InterfaceSelection struct {
+	Configured []string
+	Available  []string
+	Selected   []string
+	Invalid    []string
+	UsedAuto   bool
+}
+
+// ScanInterfaceSelection returns configured, available, selected, and invalid scan interfaces.
+func ScanInterfaceSelection(ifaces string) InterfaceSelection {
 	configured := strings.Fields(ifaces)
 	available := usableInterfaceMap()
 	auto := autoScanInterfaces(available)
 	selected, invalid, usedAuto := selectScanInterfaces(configured, available, auto)
 
-	if len(invalid) > 0 {
-		slog.Warn("Ignoring unavailable scan interfaces", "ifaces", strings.Join(invalid, " "))
+	return InterfaceSelection{
+		Configured: configured,
+		Available:  mapKeys(available),
+		Selected:   selected,
+		Invalid:    invalid,
+		UsedAuto:   usedAuto,
 	}
-	if usedAuto && len(selected) > 0 {
-		slog.Warn("Using auto-detected scan interfaces", "ifaces", strings.Join(selected, " "))
-	}
-
-	return selected
 }
 
 func selectScanInterfaces(configured []string, available map[string]bool, auto []string) ([]string, []string, bool) {
@@ -284,4 +363,14 @@ func appendUniqueString(values []string, value string) []string {
 	}
 
 	return append(values, value)
+}
+
+func mapKeys(values map[string]bool) []string {
+	keys := make([]string, 0, len(values))
+	for key := range values {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	return keys
 }

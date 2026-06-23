@@ -10,6 +10,7 @@ import (
 	"github.com/aceberg/WatchYourLAN/internal/models"
 	"github.com/aceberg/WatchYourLAN/internal/notify"
 	"github.com/aceberg/WatchYourLAN/internal/routines"
+	"github.com/aceberg/WatchYourLAN/internal/selfcheck"
 )
 
 // getVersion godoc
@@ -44,6 +45,17 @@ func triggerRescan(c *gin.Context) {
 // @Router       /config [get]
 func getConfig(c *gin.Context) {
 	c.IndentedJSON(http.StatusOK, conf.AppConfig)
+}
+
+// getSelfCheck godoc
+// @Summary      Get runtime diagnostics
+// @Description  Returns self-check results for scanner dependencies and configured interfaces
+// @Tags         system
+// @Produce      json
+// @Success      200  {object}  models.SelfCheck
+// @Router       /selfcheck [get]
+func getSelfCheck(c *gin.Context) {
+	c.IndentedJSON(http.StatusOK, selfcheck.Run(conf.AppConfig.Ifaces))
 }
 
 // notifyTest godoc

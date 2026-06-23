@@ -54,3 +54,17 @@ type Stat struct {
 	Known   int
 	Unknown int
 }
+
+// SelfCheck - application runtime diagnostics
+type SelfCheck struct {
+	OK    bool
+	Items []SelfCheckItem
+}
+
+// SelfCheckItem - one diagnostic result
+type SelfCheckItem struct {
+	Name   string
+	Status string
+	Detail string
+	Fix    string
+}

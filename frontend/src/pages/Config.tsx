@@ -4,6 +4,7 @@ import Donate from "../components/Config/Donate"
 import Influx from "../components/Config/Influx"
 import Prometheus from "../components/Config/Prometheus"
 import Scan from "../components/Config/Scan"
+import SelfCheck from "../components/SelfCheck"
 
 function Config() {
 
@@ -18,6 +19,9 @@ function Config() {
         </div>
         <div class="mt-4 mb-4">
           <Scan></Scan>
+        </div>
+        <div class="mt-4 mb-4">
+          <SelfCheck></SelfCheck>
         </div>
       </div>
       <div class="col-md">

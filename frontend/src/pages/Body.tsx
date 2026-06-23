@@ -6,6 +6,7 @@ import TableRow from "../components/Body/TableRow";
 import TableHead from "../components/Body/TableHead";
 import CardHead from "../components/Body/CardHead";
 import { getHosts } from "../functions/atstart";
+import SelfCheck from "../components/SelfCheck";
 
 function Body() {
 
@@ -14,6 +15,10 @@ function Body() {
   });
 
   return (
+    <>
+    <div class="mb-4">
+      <SelfCheck compact={true}></SelfCheck>
+    </div>
     <div class="card border-primary">
       <div class="card-header">
         <CardHead></CardHead>
@@ -29,6 +34,7 @@ function Body() {
         </table>
       </div>
     </div>
+    </>
   )
 }
 

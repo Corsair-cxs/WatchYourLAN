@@ -10,6 +10,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	// "net/http"
 
 	// _ "net/http/pprof"
@@ -29,7 +30,14 @@ const nodePath = ""
 func main() {
 	dirPtr := flag.String("d", dirPath, "Path to config dir")
 	nodePtr := flag.String("n", nodePath, "Path to node modules")
+	versionPtr := flag.Bool("version", false, "Print version and exit")
+	versionShortPtr := flag.Bool("v", false, "Print version and exit")
 	flag.Parse()
+
+	if *versionPtr || *versionShortPtr {
+		fmt.Println(web.Version())
+		return
+	}
 
 	// pprof - memory leak detect
 	// go tool pprof -alloc_space http://localhost:8085/debug/pprof/heap

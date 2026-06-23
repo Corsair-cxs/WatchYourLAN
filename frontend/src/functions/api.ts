@@ -23,6 +23,14 @@ export const apiGetVersion = async () => {
   return res;
 };
 
+export const apiGetSelfCheck = async () => {
+
+  const url = apiPath+'/api/selfcheck';
+  const res = await (await fetch(url)).json();
+
+  return res;
+};
+
 export const apiTestNotify = async () => {
 
   const url = apiPath+'/api/notify_test';

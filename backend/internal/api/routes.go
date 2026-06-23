@@ -23,6 +23,7 @@ func Routes(router *gin.Engine) {
 		r0.GET("/status/*iface", getStatus) // api-system.go
 		r0.GET("/version", getVersion)      // api-system.go
 		r0.GET("/rescan", triggerRescan)    // api-system.go
+		r0.GET("/selfcheck", getSelfCheck)  // api-system.go
 
 		r0.GET("/history", getHistory)                  // api-history.go
 		r0.GET("/history/:mac", getHistoryByMAC)        // api-history.go

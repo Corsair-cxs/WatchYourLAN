@@ -41,6 +41,18 @@ export interface Conf {
 	PrometheusEnable: boolean;
 };
 
+export interface SelfCheckItem {
+	Name: string;
+	Status: string;
+	Detail: string;
+	Fix: string;
+};
+
+export interface SelfCheck {
+	OK: boolean;
+	Items: SelfCheckItem[];
+};
+
 export const emptyHost:Host = {
 	ID:    0,
 	Name:  "",

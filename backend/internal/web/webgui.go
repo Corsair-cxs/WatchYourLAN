@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/aceberg/WatchYourLAN/internal/api"
 	"github.com/aceberg/WatchYourLAN/internal/check"
@@ -23,6 +24,14 @@ var templFS embed.FS
 //go:embed public/*
 var pubFS embed.FS
 
+// Version returns the version embedded in the public assets.
+func Version() string {
+	file, err := pubFS.ReadFile("public/version")
+	check.IfError(err)
+
+	return strings.TrimSpace(strings.TrimPrefix(string(file), "VERSION="))
+}
+
 // Gui - start web server
 func Gui() {
 	const (
@@ -30,9 +39,7 @@ func Gui() {
 		colorReset = "\033[0m"
 	)
 
-	file, err := pubFS.ReadFile("public/version")
-	check.IfError(err)
-	conf.AppConfig.Version = string(file)[8:]
+	conf.AppConfig.Version = Version()
 
 	address := conf.AppConfig.Host + ":" + conf.AppConfig.Port
 
@@ -61,6 +68,6 @@ func Gui() {
 
 	api.Routes(router)
 
-	err = router.Run(address)
+	err := router.Run(address)
 	check.IfError(err)
 }
